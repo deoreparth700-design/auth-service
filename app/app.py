@@ -1,23 +1,23 @@
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 
 from app.routes.auth_routes import router as auth_routes
 
+app = FastAPI()
 
-app = FastAPI(
-    title="Authentication API",
-    description="Production-ready authentication service built with FastAPI and PostgreSQL",
-    version="1.0.0",
-)
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 @app.get("/")
 async def root():
-    return {
-        "message": "Authentication API is running 🚀"
-    }
+    return FileResponse(FRONTEND_DIR / "login.html")
 
 
-app.include_router(
-    auth_routes,
-    prefix="/api/auth",
-)
+@app.get("/dashboard.html")
+async def dashboard():
+    return FileResponse(FRONTEND_DIR / "dashboard.html")
+
+
+app.include_router(auth_routes, prefix="/api/auth")

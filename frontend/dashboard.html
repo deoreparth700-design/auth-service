@@ -1,0 +1,205 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>auth-service — dashboard</title>
+
+  <style>
+    :root {
+      --bg: #0B0E14;
+      --card: #12161F;
+      --line: #1F2530;
+      --text: #E4E7EC;
+      --muted: #6B7280;
+      --accent: #4F7CFF;
+      --error: #FF6B6B;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 32px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+
+    .info {
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 10px 0;
+      font-size: 14px;
+    }
+
+    .label {
+      color: var(--muted);
+    }
+
+    .value {
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .error {
+      color: var(--error);
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 24px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #3E68E0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+
+    <h1>Authenticated</h1>
+
+    <p class="subtitle">
+      Your access token successfully authenticated this request.
+    </p>
+
+    <p class="error" id="errorMsg">
+      Authentication failed.
+    </p>
+
+    <div class="info">
+
+      <div class="row">
+        <span class="label">User ID</span>
+        <span class="value" id="userId">Loading...</span>
+      </div>
+
+      <div class="row">
+        <span class="label">Name</span>
+        <span class="value" id="userName">Loading...</span>
+      </div>
+
+      <div class="row">
+        <span class="label">Email</span>
+        <span class="value" id="userEmail">Loading...</span>
+      </div>
+
+    </div>
+
+    <button id="logoutBtn">
+      Logout
+    </button>
+
+  </div>
+
+  <script>
+    const accessToken = localStorage.getItem("accessToken");
+
+    const errorMsg = document.getElementById("errorMsg");
+
+    if (!accessToken) {
+      window.location.href = "/";
+    }
+
+    async function loadUser() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Authentication failed");
+        }
+
+        const user = data.user;
+
+        document.getElementById("userId").textContent = user.id;
+        document.getElementById("userName").textContent = user.name;
+        document.getElementById("userEmail").textContent = user.email;
+
+      } catch (error) {
+        console.error(error);
+
+        errorMsg.textContent = error.message;
+        errorMsg.classList.add("show");
+
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1500);
+      }
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+
+      window.location.href = "/";
+    });
+
+    loadUser();
+  </script>
+
+</body>
+</html>
