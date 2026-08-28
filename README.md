@@ -1,64 +1,68 @@
-# Authentication Service — FastAPI + PostgreSQL
+# Auth Service 🔐
 
-A production-oriented authentication REST API built with **Python, FastAPI, PostgreSQL (Neon), JWT, bcrypt, and refresh-token rotation**.
+A production-oriented authentication service built with **FastAPI, PostgreSQL, JWT, and Python**.
 
-This project implements a complete authentication lifecycle including user registration, secure password hashing, login, JWT access tokens, protected routes, refresh tokens, refresh-token rotation and revocation, logout, and login rate limiting.
+This project implements a complete authentication flow including user registration, secure password hashing, JWT access tokens, refresh tokens, protected routes, rate limiting, and a minimal web interface.
 
----
+## 🚀 Live Demo
 
-## 🚀 Features
+**Auth Service:**
+https://auth-service-17bm.onrender.com
 
-* User registration
-* Email validation
-* Secure password hashing with bcrypt
-* User login
-* JWT access tokens
-* Protected authentication routes
-* JWT authentication middleware
-* Refresh tokens
-* Refresh-token hashing before database storage
-* Refresh-token expiration
-* Refresh-token rotation
-* Refresh-token revocation
-* Logout
+## ✨ Features
+
+* User registration and login
+* Secure password hashing with `bcrypt`
+* JWT-based authentication
+* Short-lived access tokens
+* Refresh token support
+* Refresh token persistence in PostgreSQL
+* Protected `/me` endpoint
 * Login rate limiting
-* PostgreSQL database
-* Neon PostgreSQL support
-* Environment-variable based configuration
-* Async database operations with `asyncpg`
-* FastAPI Swagger/OpenAPI documentation
-
----
+* Token validation and expiration handling
+* PostgreSQL connection pooling with `asyncpg`
+* Environment-based configuration
+* Minimal login, signup, and dashboard interface
+* Production deployment on Render
 
 ## 🛠️ Tech Stack
 
-| Technology    | Purpose                         |
-| ------------- | ------------------------------- |
-| Python        | Backend language                |
-| FastAPI       | REST API framework              |
-| Uvicorn       | ASGI server                     |
-| PostgreSQL    | Database                        |
-| Neon          | Hosted PostgreSQL               |
-| asyncpg       | Async PostgreSQL driver         |
-| PyJWT         | JWT creation and verification   |
-| bcrypt        | Password hashing                |
-| Pydantic      | Request validation              |
-| python-dotenv | Environment variable management |
+### Backend
 
----
+* Python
+* FastAPI
+* Uvicorn
+* PostgreSQL
+* asyncpg
+* PyJWT
+* bcrypt
+* Pydantic
+
+### Frontend
+
+* HTML
+* CSS
+* Vanilla JavaScript
+
+### Deployment
+
+* Render
+* PostgreSQL / Neon
 
 ## 📁 Project Structure
 
 ```text
-auth-service-py/
+auth-service/
 │
 ├── app/
 │   ├── controllers/
 │   │   └── auth_controller.py
 │   │
 │   ├── db/
-│   │   ├── pool.py
-│   │   └── schema.sql
+│   │   └── pool.py
+│   │
+│   ├── middleware/
+│   │   └── auth.py
 │   │
 │   ├── models/
 │   │   ├── user_model.py
@@ -67,589 +71,246 @@ auth-service-py/
 │   ├── routes/
 │   │   └── auth_routes.py
 │   │
-│   ├── utils/
-│   │   ├── auth_middleware.py
-│   │   ├── jwt_utils.py
-│   │   ├── password_utils.py
-│   │   ├── refresh_token_utils.py
-│   │   └── rate_limiter.py
-│   │
-│   └── app.py
+│   └── utils/
+│       ├── auth_middleware.py
+│       ├── jwt_utils.py
+│       ├── rate_limiter.py
+│       └── refresh_token_utils.py
 │
-├── .env.example
-├── .gitignore
+├── frontend/
+│   ├── login.html
+│   ├── signup.html
+│   └── dashboard.html
+│
+├── app.py
+├── server.py
 ├── requirements.txt
-├── README.md
-└── server.py
+├── runtime.txt
+├── .env.example
+└── .gitignore
 ```
 
----
+## 🔑 Authentication Flow
 
-# 🔐 Authentication Architecture
+### 1. Registration
 
-The service uses short-lived JWT access tokens together with long-lived refresh tokens.
-
-```text
-                         ┌─────────────────┐
-                         │     Client      │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                         POST /api/auth/login
-                                  │
-                    ┌─────────────┴─────────────┐
-                    │                           │
-                    ▼                           ▼
-              Verify bcrypt              Generate tokens
-                password                       │
-                    │                  ┌────────┴────────┐
-                    │                  │                 │
-                    ▼                  ▼                 ▼
-                  User            Access Token      Refresh Token
-                                     15 min            7 days
-                                                          │
-                                                          ▼
-                                                    SHA-256 hash
-                                                          │
-                                                          ▼
-                                                     PostgreSQL
-```
-
----
-
-# 🔑 Access Tokens
-
-Access tokens are JWTs signed using `HS256`.
-
-They contain the user's ID and expiration information.
-
-Example payload:
-
-```json
-{
-  "userId": 123,
-  "iat": 1750000000,
-  "exp": 1750000900
-}
-```
-
-Access tokens expire after approximately **15 minutes**.
-
-Clients send the access token using:
-
-```text
-Authorization: Bearer <access_token>
-```
-
----
-
-# 🔄 Refresh Tokens
-
-Refresh tokens are randomly generated using Python's `secrets` module.
-
-The raw refresh token is returned to the client, but **only its SHA-256 hash is stored in PostgreSQL**.
-
-```text
-Raw Refresh Token
-        │
-        ▼
-    SHA-256
-        │
-        ▼
- PostgreSQL
-```
-
-Refresh tokens expire after **7 days**.
-
----
-
-# 🔁 Refresh Token Rotation
-
-Every successful refresh invalidates the previous refresh token.
-
-```text
-Refresh Token A
-      │
-      ▼
-POST /api/auth/refresh
-      │
-      ├── Token A revoked
-      │
-      ├── New Access Token
-      │
-      └── New Refresh Token B
-```
-
-Trying to reuse Token A results in:
-
-```text
-401 Unauthorized
-```
-
-This helps protect against refresh-token replay.
-
----
-
-# 🚪 Logout
-
-Logout revokes the supplied refresh token.
-
-```text
-POST /api/auth/logout
-        │
-        ▼
-Find refresh token
-        │
-        ▼
-Set revoked_at
-        │
-        ▼
-Token can no longer refresh
-```
-
-The current access token remains valid until its normal expiration. This is expected with short-lived stateless JWT access tokens.
-
----
-
-# 🛡️ Login Rate Limiting
-
-The login endpoint includes an in-memory rate limiter.
-
-Current configuration:
-
-```text
-Maximum failed attempts: 5
-Time window: 60 seconds
-```
-
-After the limit is reached:
-
-```text
-HTTP 429 Too Many Requests
-```
-
-Successful login clears the failed-attempt counter.
-
-> Note: The current implementation stores rate-limit state in application memory. For a multi-instance production deployment, Redis or another shared store should be used.
-
----
-
-# 🗄️ Database Schema
-
-The service uses two primary tables.
-
-## Users
-
-```text
-users
-├── id
-├── name
-├── email
-├── password_hash
-├── created_at
-└── updated_at
-```
-
-## Refresh Tokens
-
-```text
-refresh_tokens
-├── id
-├── user_id
-├── token_hash
-├── expires_at
-├── created_at
-└── revoked_at
-```
-
-The relationship is:
-
-```text
-users
-  │
-  │ 1
-  │
-  │
-  │ N
-  ▼
-refresh_tokens
-```
-
-Deleting a user also deletes their refresh tokens using:
-
-```sql
-ON DELETE CASCADE
-```
-
----
-
-# 📡 API Endpoints
-
-Base URL:
-
-```text
-/api/auth
-```
-
-| Method | Endpoint   | Authentication | Description          |
-| ------ | ---------- | -------------- | -------------------- |
-| POST   | `/signup`  | No             | Register a new user  |
-| POST   | `/login`   | No             | Authenticate user    |
-| GET    | `/me`      | Bearer Token   | Get current user     |
-| POST   | `/refresh` | No             | Refresh access token |
-| POST   | `/logout`  | No             | Revoke refresh token |
-
----
-
-# 📝 Signup
-
-### Request
+The user submits:
 
 ```http
 POST /api/auth/signup
-Content-Type: application/json
 ```
 
-```json
-{
-  "name": "Parth",
-  "email": "parth@example.com",
-  "password": "securepassword123"
-}
-```
+The service:
 
-### Response
+1. Validates the input.
+2. Checks whether the email already exists.
+3. Hashes the password using bcrypt.
+4. Creates the user in PostgreSQL.
+5. Returns the registration result.
 
-```json
-{
-  "message": "User created successfully",
-  "user": {
-    "id": 1,
-    "name": "Parth",
-    "email": "parth@example.com",
-    "created_at": "2026-08-28T12:00:00"
-  }
-}
-```
+### 2. Login
 
----
-
-# 🔑 Login
-
-### Request
+The user submits:
 
 ```http
 POST /api/auth/login
-Content-Type: application/json
 ```
 
-```json
-{
-  "email": "parth@example.com",
-  "password": "securepassword123"
-}
-```
+The service:
 
-### Response
+1. Finds the user by email.
+2. Verifies the password.
+3. Applies login rate limiting.
+4. Generates an access token.
+5. Generates a refresh token.
+6. Stores the refresh token in PostgreSQL.
 
-```json
-{
-  "message": "Login successful",
-  "accessToken": "<access_token>",
-  "refreshToken": "<refresh_token>"
-}
-```
+### 3. Protected Requests
 
----
-
-# 👤 Get Current User
-
-### Request
+Protected endpoints require:
 
 ```http
-GET /api/auth/me
 Authorization: Bearer <access_token>
 ```
 
-### Response
+The authentication middleware:
 
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "Parth",
-    "email": "parth@example.com",
-    "created_at": "2026-08-28T12:00:00"
-  }
-}
-```
+1. Extracts the JWT.
+2. Verifies its signature.
+3. Checks expiration.
+4. Extracts the user ID.
+5. Retrieves the user.
+6. Allows the request to continue.
 
----
+### 4. Refresh Token
 
-# 🔄 Refresh Token
-
-### Request
+When the access token expires, the client can request a new access token using:
 
 ```http
 POST /api/auth/refresh
-Content-Type: application/json
 ```
 
-```json
-{
-  "refreshToken": "<refresh_token>"
-}
-```
+The refresh token is validated against the stored token before issuing a new access token.
 
-### Response
+## 📡 API Endpoints
 
-```json
-{
-  "message": "Token refreshed successfully",
-  "accessToken": "<new_access_token>",
-  "refreshToken": "<new_refresh_token>"
-}
-```
+| Method | Endpoint            | Description            | Authentication |
+| ------ | ------------------- | ---------------------- | -------------- |
+| `POST` | `/api/auth/signup`  | Create a new account   | No             |
+| `POST` | `/api/auth/login`   | Authenticate user      | No             |
+| `POST` | `/api/auth/refresh` | Refresh access token   | Refresh token  |
+| `GET`  | `/api/auth/me`      | Get authenticated user | Bearer token   |
 
-The previous refresh token is revoked.
+## 🧪 Running Locally
 
----
-
-# 🚪 Logout
-
-### Request
-
-```http
-POST /api/auth/logout
-Content-Type: application/json
-```
-
-```json
-{
-  "refreshToken": "<refresh_token>"
-}
-```
-
-### Response
-
-```json
-{
-  "message": "Logout successful"
-}
-```
-
----
-
-# ⚙️ Environment Variables
-
-Create a `.env` file in the project root.
-
-```env
-DATABASE_URL=your_neon_postgresql_connection_string
-JWT_ACCESS_SECRET=your_strong_jwt_secret
-PORT=3000
-```
-
-Never commit `.env` to Git.
-
-Use `.env.example` for documenting required variables.
-
----
-
-# 💻 Local Setup
-
-## 1. Clone the repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/deoreparth700-design/auth-service.git
 cd auth-service
 ```
 
-## 2. Create a virtual environment
+### 2. Create a virtual environment
 
 Windows:
 
-```powershell
-python -m venv .venv
+```bash
+python -m venv venv
+venv\Scripts\activate
 ```
 
-Activate it:
+Linux/macOS:
 
-```powershell
-.venv\Scripts\activate
+```bash
+python3 -m venv venv
+source venv/bin/activate
 ```
 
----
-
-## 3. Install dependencies
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
+### 4. Configure environment variables
 
-## 4. Configure environment variables
-
-Create:
-
-```text
-.env
-```
-
-Add:
+Create a `.env` file:
 
 ```env
-DATABASE_URL=your_neon_database_url
-JWT_ACCESS_SECRET=your_jwt_secret
 PORT=3000
+DATABASE_URL=your_postgresql_connection_string
+JWT_ACCESS_SECRET=your_secret_key
 ```
 
----
+Never commit `.env` to GitHub.
 
-## 5. Initialize the database
-
-Execute the SQL contained in:
-
-```text
-app/db/schema.sql
-```
-
-against your PostgreSQL/Neon database.
-
----
-
-## 6. Start the server
+### 5. Start the server
 
 ```bash
 python server.py
 ```
 
-The API will be available at:
+The service will be available at:
 
 ```text
 http://localhost:3000
 ```
 
----
+## 🌐 Frontend
 
-# 📚 API Documentation
+The project includes a minimal interface for testing the authentication system.
 
-FastAPI automatically provides interactive Swagger documentation.
-
-Open:
+### Login
 
 ```text
-http://localhost:3000/docs
+/login.html
 ```
 
-Alternative ReDoc documentation:
+### Signup
 
 ```text
-http://localhost:3000/redoc
+/signup.html
 ```
 
----
-
-# 🧪 Authentication Flow
-
-A typical client session works like this:
+### Dashboard
 
 ```text
-1. Signup
-       ↓
-2. Login
-       ↓
-3. Receive Access + Refresh Tokens
-       ↓
-4. Use Access Token for protected requests
-       ↓
-5. Access Token expires
-       ↓
-6. Send Refresh Token
-       ↓
-7. Old Refresh Token revoked
-       ↓
-8. Receive new Access + Refresh Tokens
-       ↓
-9. Continue using API
-       ↓
-10. Logout
-       ↓
-11. Refresh Token revoked
+/dashboard.html
 ```
 
----
-
-# 🔒 Security Considerations
-
-Implemented:
-
-* bcrypt password hashing
-* JWT signature verification
-* short-lived access tokens
-* hashed refresh tokens
-* refresh-token expiration
-* refresh-token rotation
-* refresh-token revocation
-* protected routes
-* login rate limiting
-* environment-based secrets
-* PostgreSQL SSL connection
-
-Future production improvements:
-
-* Redis-based distributed rate limiting
-* transactional refresh-token rotation
-* secure HttpOnly cookies for browser clients
-* CSRF protection when using cookies
-* email verification
-* password reset
-* account lockout/security monitoring
-* structured logging
-* automated tests
-* CI/CD
-* stronger password policy
-* refresh-token reuse detection
-* centralized secret management
-
----
-
-# 📌 Project Status
+The frontend communicates with the FastAPI backend using the same-origin API endpoints:
 
 ```text
-FastAPI API                 ✅
-PostgreSQL / Neon           ✅
-User registration           ✅
-bcrypt password hashing     ✅
-Login                       ✅
-JWT access tokens           ✅
-Protected routes            ✅
-JWT middleware              ✅
-Refresh tokens              ✅
-Token rotation              ✅
-Token revocation            ✅
-Logout                      ✅
-Login rate limiting         ✅
-Production configuration    ✅
-Documentation               ✅
-Deployment                  ⏳
+/api/auth/signup
+/api/auth/login
+/api/auth/refresh
+/api/auth/me
 ```
 
----
+## 🔒 Security
 
-# 👨‍💻 Author
+The project includes several authentication security mechanisms:
+
+* Passwords are never stored in plaintext.
+* Passwords are hashed using bcrypt.
+* Access tokens are signed using a server-side secret.
+* Access tokens expire.
+* Refresh tokens are persisted server-side.
+* Protected endpoints require authentication.
+* Invalid or expired tokens are rejected.
+* Login attempts are rate limited.
+* Secrets are stored through environment variables.
+* `.env` is excluded from Git.
+
+> **Production note:** For a larger production system, additional protections such as secure HTTP-only cookies, CSRF protection where applicable, distributed rate limiting, token revocation strategies, structured logging, monitoring, and secret management should be added.
+
+## 🗄️ Database
+
+The service uses **PostgreSQL** for persistent data.
+
+The database stores user information and refresh-token data.
+
+A shared `asyncpg` connection pool is used to efficiently manage database connections.
+
+## ☁️ Deployment
+
+The service is deployed using **Render**.
+
+Production configuration is supplied through environment variables rather than committing secrets to the repository.
+
+Python runtime is pinned to ensure consistent dependency installation.
+
+## 📚 What I Built
+
+This project was built to understand authentication systems beyond basic CRUD APIs.
+
+Key concepts implemented:
+
+* REST API design
+* Authentication vs. authorization
+* Password hashing
+* JWT authentication
+* Access and refresh tokens
+* Middleware
+* Protected routes
+* PostgreSQL connection pooling
+* Rate limiting
+* Environment configuration
+* Frontend-to-backend integration
+* Production deployment
+
+## 👨‍💻 Author
 
 **Parth Deore**
 
 Computer Science & Engineering
 
 GitHub:
-
 https://github.com/deoreparth700-design
-
----
 
 ## 📄 License
 
-This project is intended for learning, portfolio development, and backend engineering practice.
+This project is available for educational and portfolio purposes.
+
+```
+```
