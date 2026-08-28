@@ -4,41 +4,54 @@ import ssl
 import asyncpg
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 
 _pool: asyncpg.Pool | None = None
 
 
 async def create_pool() -> asyncpg.Pool:
-    """Create (once) and return the shared connection pool.
+    """Create and return the shared PostgreSQL connection pool."""
 
-    Mirrors src/db/pool.js, which builds a `pg.Pool` with
-    `ssl: { rejectUnauthorized: false }`.
-    """
     global _pool
 
-    if _pool is None:
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
+    if _pool is not None:
+        return _pool
 
-        _pool = await asyncpg.create_pool(
-            dsn=os.environ.get("DATABASE_URL"),
-            ssl=ssl_context,
+    database_url = os.environ.get("DATABASE_URL")
+
+    if not database_url:
+        raise RuntimeError(
+            "DATABASE_URL environment variable is not set"
         )
+
+    ssl_context = ssl.create_default_context()
+
+    _pool = await asyncpg.create_pool(
+        dsn=database_url,
+        ssl=ssl_context,
+    )
 
     return _pool
 
 
 def get_pool() -> asyncpg.Pool:
-    """Return the already-created pool. Raises if called before create_pool()."""
+    """Return the initialized PostgreSQL connection pool."""
+
     if _pool is None:
-        raise RuntimeError("Pool has not been created yet. Call create_pool() first.")
+        raise RuntimeError(
+            "Database pool has not been initialized"
+        )
+
     return _pool
 
 
 async def close_pool() -> None:
+    """Close the PostgreSQL connection pool."""
+
     global _pool
+
     if _pool is not None:
         await _pool.close()
         _pool = None

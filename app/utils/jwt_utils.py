@@ -5,10 +5,33 @@ import jwt
 
 
 def generate_access_token(user_id) -> str:
+    now = datetime.now(timezone.utc)
+
     payload = {
         "userId": user_id,
-        # jsonwebtoken's expiresIn: "15m" -> encode iat/exp ourselves with PyJWT
-        "iat": datetime.now(timezone.utc),
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=15),
+        "iat": now,
+        "exp": now + timedelta(minutes=15),
     }
-    return jwt.encode(payload, os.environ.get("JWT_ACCESS_SECRET"), algorithm="HS256")
+
+    return jwt.encode(
+        payload,
+        os.environ.get("JWT_ACCESS_SECRET"),
+        algorithm="HS256",
+    )
+
+
+def verify_access_token(token: str):
+    try:
+        payload = jwt.decode(
+            token,
+            os.environ.get("JWT_ACCESS_SECRET"),
+            algorithms=["HS256"],
+        )
+
+        return payload
+
+    except jwt.ExpiredSignatureError:
+        return None
+
+    except jwt.InvalidTokenError:
+        return None
