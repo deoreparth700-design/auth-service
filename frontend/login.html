@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>auth-service — sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E14;
+    --card:#12161F;
+    --line:#1F2530;
+    --text:#E4E7EC;
+    --muted:#6B7280;
+    --accent:#4F7CFF;
+    --accent-dim:#324B8F;
+    --error:#FF6B6B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .wrap{ width:100%; max-width:380px; }
+
+  .status-line{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:18px;
+    letter-spacing:0.02em;
+  }
+  .status-dot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 3px rgba(79,124,255,0.15);
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:32px 28px 28px;
+  }
+
+  h1{
+    font-size:19px;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .sub{
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:26px;
+  }
+
+  form{ display:flex; flex-direction:column; gap:16px; }
+
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  label{
+    font-size:12px;
+    color:var(--muted);
+    font-family:'JetBrains Mono', monospace;
+  }
+  input{
+    background:#0D1017;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:11px 12px;
+    color:var(--text);
+    font-size:14px;
+    font-family:'Inter', sans-serif;
+    outline:none;
+    transition:border-color 0.15s ease;
+  }
+  input::placeholder{ color:#454C5A; }
+  input:focus{
+    border-color:var(--accent);
+  }
+  input:focus-visible{
+    box-shadow:0 0 0 3px rgba(79,124,255,0.18);
+  }
+
+  .error-msg{
+    font-size:12.5px;
+    color:var(--error);
+    display:none;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .error-msg.show{ display:block; }
+
+  button{
+    margin-top:6px;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    padding:12px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  button:hover{ background:#3E68E0; }
+  button:disabled{ background:var(--accent-dim); cursor:not-allowed; }
+
+  .foot{
+    margin-top:20px;
+    text-align:center;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  .foot a{ color:var(--accent); text-decoration:none; }
+  .foot a:hover{ text-decoration:underline; }
+</style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="status-line">
+      <span class="status-dot"></span>
+      <span id="statusText">POST /auth/login</span>
+    </div>
+
+    <div class="card">
+      <h1>Sign in</h1>
+      <p class="sub">Access your auth-service account</p>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="email">EMAIL</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="username">
+        </div>
+
+        <div class="field">
+          <label for="password">PASSWORD</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <p class="error-msg" id="errorMsg">Invalid email or password.</p>
+
+        <button type="submit" id="submitBtn">Sign in</button>
+      </form>
+
+      <p class="foot">No account? <a href="#">Create one</a></p>
+    </div>
+  </div>
+
+```html
+<script>
+  // FastAPI backend
+  const API_URL = "http://127.0.0.1:3000/api/auth/login";
+
+  const form = document.getElementById("loginForm");
+  const btn = document.getElementById("submitBtn");
+  const errorMsg = document.getElementById("errorMsg");
+  const statusText = document.getElementById("statusText");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    errorMsg.classList.remove("show");
+
+    btn.disabled = true;
+    btn.textContent = "Signing in…";
+    statusText.textContent = "POST /api/auth/login → pending";
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Login failed");
+      }
+
+      // Your FastAPI backend returns camelCase token names.
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+
+      statusText.textContent = "POST /api/auth/login → 200";
+      
+      window.location.href = "/dashboard.html";
+      console.log("Login successful:", data);
+
+      // We'll add dashboard later.
+      // window.location.href = "dashboard.html";
+
+    } catch (error) {
+      console.error("Login error:", error);
+
+      statusText.textContent = "POST /api/auth/login → error";
+
+      errorMsg.textContent =
+        error.message || "Invalid email or password.";
+
+      errorMsg.classList.add("show");
+
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Sign in";
+    }
+  });
+</script>
+
+</body>
+</html>
