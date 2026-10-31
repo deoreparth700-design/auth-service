@@ -44,6 +44,7 @@ jobs:
 
       - name: Run tests
         env:
+          PYTHONPATH: .
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/auth_test
         run: |
           pytest -q

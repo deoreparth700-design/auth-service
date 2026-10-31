@@ -1,7 +1,12 @@
 import os
 import ssl
+import sys
 import urllib.parse
+from pathlib import Path
 import pytest
+
+# Ensure repository root is on sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 import asyncpg
 from httpx import AsyncClient, ASGITransport
