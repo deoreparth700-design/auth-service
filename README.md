@@ -1,5 +1,7 @@
 # Auth Service 🔐
 
+[![Tests](https://github.com/deoreparth700-design/auth-service/actions/workflows/tests.yml/badge.svg)](https://github.com/deoreparth700-design/auth-service/actions/workflows/tests.yml)
+
 A production-oriented authentication service built with **FastAPI, PostgreSQL, JWT, and Python**.
 
 This project implements a complete authentication flow including user registration, secure password hashing, JWT access tokens, refresh tokens, protected routes, rate limiting, and a minimal web interface.
@@ -311,6 +313,30 @@ The service is deployed using **Render**.
 Production configuration is supplied through environment variables rather than committing secrets to the repository.
 
 Python runtime is pinned to ensure consistent dependency installation.
+
+## 🧪 Running tests
+
+Install development dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Set the `TEST_DATABASE_URL` environment variable pointing to a test PostgreSQL database (the database name must contain `test` and must not equal `DATABASE_URL`):
+
+```bash
+# Example (Linux / macOS)
+export TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/auth_test"
+
+# Example (Windows PowerShell)
+$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/auth_test"
+```
+
+Run tests with `pytest`:
+
+```bash
+pytest -q
+```
 
 ## 📚 What I Built
 
