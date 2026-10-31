@@ -1,5 +1,8 @@
+import logging
 from datetime import datetime
 
+import email_validator
+from email_validator import EmailNotValidError
 from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel
 
@@ -31,6 +34,9 @@ from app.utils.rate_limiter import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 class SignupRequest(BaseModel):
     name: str | None = None
     email: str | None = None
@@ -60,7 +66,9 @@ async def signup(body: SignupRequest):
                 detail="Name, email and password are required",
             )
 
-        if "@" not in email:
+        try:
+            email_validator.validate_email(email, check_deliverability=False)
+        except EmailNotValidError:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid email address",
@@ -70,6 +78,12 @@ async def signup(body: SignupRequest):
             raise HTTPException(
                 status_code=400,
                 detail="Password must be at least 8 characters",
+            )
+
+        if len(password.encode("utf-8")) > 72:
+            raise HTTPException(
+                status_code=400,
+                detail="Password must be at most 72 bytes",
             )
 
         existing_user = await find_user_by_email(email)
@@ -97,7 +111,7 @@ async def signup(body: SignupRequest):
         raise
 
     except Exception as error:
-        print("Signup error:", error)
+        logger.exception("Signup error: %s", error)
 
         raise HTTPException(
             status_code=500,
@@ -186,7 +200,7 @@ async def login(
         raise
 
     except Exception as error:
-        print("Login error:", error)
+        logger.exception("Login error: %s", error)
 
         raise HTTPException(
             status_code=500,
@@ -276,7 +290,7 @@ async def refresh_access_token(
         raise
 
     except Exception as error:
-        print("Refresh token error:", error)
+        logger.exception("Refresh token error: %s", error)
 
         raise HTTPException(
             status_code=500,
@@ -318,7 +332,7 @@ async def logout(
         raise
 
     except Exception as error:
-        print("Logout error:", error)
+        logger.exception("Logout error: %s", error)
 
         raise HTTPException(
             status_code=500,
