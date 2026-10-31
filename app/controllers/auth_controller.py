@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 import email_validator
@@ -31,6 +32,9 @@ from app.utils.rate_limiter import (
     record_failed_attempt,
     reset_attempts,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class SignupRequest(BaseModel):
@@ -107,7 +111,7 @@ async def signup(body: SignupRequest):
         raise
 
     except Exception as error:
-        print("Signup error:", error)
+        logger.exception("Signup error: %s", error)
 
         raise HTTPException(
             status_code=500,
@@ -196,7 +200,7 @@ async def login(
         raise
 
     except Exception as error:
-        print("Login error:", error)
+        logger.exception("Login error: %s", error)
 
         raise HTTPException(
             status_code=500,
@@ -286,7 +290,7 @@ async def refresh_access_token(
         raise
 
     except Exception as error:
-        print("Refresh token error:", error)
+        logger.exception("Refresh token error: %s", error)
 
         raise HTTPException(
             status_code=500,
@@ -328,7 +332,7 @@ async def logout(
         raise
 
     except Exception as error:
-        print("Logout error:", error)
+        logger.exception("Logout error: %s", error)
 
         raise HTTPException(
             status_code=500,

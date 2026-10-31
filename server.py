@@ -1,3 +1,5 @@
+import logging
+from logging import INFO
 import os
 from contextlib import asynccontextmanager
 
@@ -9,6 +11,7 @@ from app.app import app
 from app.db.pool import create_pool, close_pool
 
 
+logging.basicConfig(level=INFO)
 load_dotenv()
 
 
@@ -44,10 +47,13 @@ app.router.lifespan_context = lifespan
 def start_server():
     print(f"🚀 Server running on http://localhost:{PORT}")
 
+    # Trust reverse proxy headers to extract real client IPs since the app runs behind Render's proxy
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=PORT,
+        proxy_headers=True,
+        forwarded_allow_ips="*",
     )
 
 
