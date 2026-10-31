@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import email_validator
+from email_validator import EmailNotValidError
 from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel
 
@@ -60,7 +62,9 @@ async def signup(body: SignupRequest):
                 detail="Name, email and password are required",
             )
 
-        if "@" not in email:
+        try:
+            email_validator.validate_email(email, check_deliverability=False)
+        except EmailNotValidError:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid email address",
@@ -70,6 +74,12 @@ async def signup(body: SignupRequest):
             raise HTTPException(
                 status_code=400,
                 detail="Password must be at least 8 characters",
+            )
+
+        if len(password.encode("utf-8")) > 72:
+            raise HTTPException(
+                status_code=400,
+                detail="Password must be at most 72 bytes",
             )
 
         existing_user = await find_user_by_email(email)

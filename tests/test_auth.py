@@ -74,6 +74,19 @@ async def test_signup_bad_email(client: AsyncClient):
     assert res.json()["detail"] == "Invalid email address"
 
 
+async def test_signup_email_without_valid_domain(client: AsyncClient):
+    res = await client.post(
+        "/api/auth/signup",
+        json={
+            "name": "Invalid Domain User",
+            "email": "a@b",
+            "password": "securepassword123",
+        },
+    )
+    assert res.status_code == 400
+    assert res.json()["detail"] == "Invalid email address"
+
+
 # 5. Password under 8 chars -> 400
 async def test_signup_password_under_8_chars(client: AsyncClient):
     res = await client.post(
@@ -86,6 +99,32 @@ async def test_signup_password_under_8_chars(client: AsyncClient):
     )
     assert res.status_code == 400
     assert res.json()["detail"] == "Password must be at least 8 characters"
+
+
+async def test_signup_password_longer_than_72_bytes(client: AsyncClient):
+    res = await client.post(
+        "/api/auth/signup",
+        json={
+            "name": "Long Password User",
+            "email": "longpass@example.com",
+            "password": "a" * 73,
+        },
+    )
+    assert res.status_code == 400
+    assert res.json()["detail"] == "Password must be at most 72 bytes"
+
+
+async def test_signup_password_exactly_72_bytes_works(client: AsyncClient):
+    res = await client.post(
+        "/api/auth/signup",
+        json={
+            "name": "Max Password User",
+            "email": "maxpass@example.com",
+            "password": "a" * 72,
+        },
+    )
+    assert res.status_code == 200
+    assert res.json()["message"] == "User created successfully"
 
 
 # 6. Login success returns accessToken and refreshToken
@@ -191,6 +230,7 @@ async def test_me_with_invalid_token(client: AsyncClient):
 async def test_me_with_no_token(client: AsyncClient):
     res = await client.get("/api/auth/me")
     assert res.status_code == 401
+    assert res.headers.get("www-authenticate") == "Bearer"
 
 
 # 11. Refresh returns new tokens and the OLD refresh token then fails
