@@ -26,11 +26,17 @@ async def create_pool() -> asyncpg.Pool:
             "DATABASE_URL environment variable is not set"
         )
 
-    ssl_context = ssl.create_default_context()
+    # Use SSL unless the connection string explicitly disables it.
+    # Production databases (e.g. Neon / Render) require SSL;
+    # local and Docker Compose Postgres do not support it.
+    if "sslmode=disable" in database_url:
+        ssl_option = False
+    else:
+        ssl_option = ssl.create_default_context()
 
     _pool = await asyncpg.create_pool(
         dsn=database_url,
-        ssl=ssl_context,
+        ssl=ssl_option,
     )
 
     return _pool
