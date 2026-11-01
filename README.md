@@ -92,7 +92,10 @@ auth-service/
 ├── server.py                   # entrypoint: starts Uvicorn and the DB pool
 ├── requirements.txt
 ├── runtime.txt
+├── Dockerfile
+├── compose.yaml
 ├── .env.example
+├── .env.docker.example
 └── .gitignore
 ```
 
@@ -220,7 +223,7 @@ JWT_ACCESS_SECRET=your_secret_key
 
 Never commit `.env` to GitHub.
 
-`DATABASE_URL` must point to a PostgreSQL server that accepts SSL connections (a free [Neon](https://neon.tech) database works). The connection pool always requires SSL, so a plain local PostgreSQL without SSL will fail to connect.
+`DATABASE_URL` must point to a PostgreSQL server. Cloud databases (e.g. [Neon](https://neon.tech)) require SSL, which is enabled by default. To connect to a local PostgreSQL without SSL, append `?sslmode=disable` to the URL (the Docker setup does this automatically).
 
 If you use the Blog Platform API or CartAPI with this service, they must verify tokens with the exact same secret: use the same value as `JWT_ACCESS_SECRET` in the Blog Platform API, and as `JWT_SECRET` in CartAPI.
 
@@ -243,6 +246,36 @@ The service will be available at:
 ```text
 http://localhost:3000
 ```
+
+## 🐳 Run with Docker
+
+### 1. Create the environment file
+
+```bash
+cp .env.docker.example .env.docker
+```
+
+### 2. Edit the secret
+
+Open `.env.docker` and replace the `JWT_ACCESS_SECRET` placeholder with a long random string.
+
+### 3. Start the services
+
+```bash
+docker compose up --build
+```
+
+### 4. Open the app
+
+Visit [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 5. Stop the services
+
+```bash
+docker compose down
+```
+
+> **⚠️ Warning:** Running `docker compose down -v` will delete the database volume and all stored data.
 
 ## 🌐 Frontend
 
