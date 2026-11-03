@@ -402,3 +402,5 @@ https://github.com/deoreparth700-design
 ## 📄 License
 
 This project is available for educational and portfolio purposes.
+
+License: MIT
