@@ -62,3 +62,22 @@ jobs:
         run: |
           cp .env.docker.example .env.docker
           docker compose config -q
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linter and type checker
+        run: pip install ruff==0.17.3 mypy==2.4.1
+
+      - name: Run ruff check
+        run: ruff check .
+
+      - name: Run mypy
+        run: mypy --ignore-missing-imports --no-strict-optional app
