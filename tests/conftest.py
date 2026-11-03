@@ -32,9 +32,9 @@ if "test" not in db_name.lower():
 os.environ["DATABASE_URL"] = test_db_url
 os.environ["JWT_ACCESS_SECRET"] = "test-jwt-access-secret-for-testing-only"
 
-from app.app import app
-import app.db.pool as db_pool
-from app.utils.rate_limiter import _login_attempts
+from app.app import app  # noqa: E402  # env vars must be set before importing app
+import app.db.pool as db_pool  # noqa: E402
+from app.utils.rate_limiter import _login_attempts  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)

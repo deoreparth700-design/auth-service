@@ -6,10 +6,6 @@ from app.controllers.auth_controller import (
     get_me,
     refresh_access_token,
     logout,
-    SignupRequest,
-    LoginRequest,
-    RefreshTokenRequest,
-    LogoutRequest,
 )
 
 router = APIRouter()
