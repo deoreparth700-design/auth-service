@@ -29,6 +29,7 @@ async def create_pool() -> asyncpg.Pool:
     # Use SSL unless the connection string explicitly disables it.
     # Production databases (e.g. Neon / Render) require SSL;
     # local and Docker Compose Postgres do not support it.
+    ssl_option: ssl.SSLContext | bool
     if "sslmode=disable" in database_url:
         ssl_option = False
     else:
